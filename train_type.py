@@ -14,11 +14,12 @@ import torch.nn.functional as F
 from instruments_data2017.instruments_data import instruDataset
 from model import InstrumentsMFF
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 args = {
     'num_class': 8,
-    'num_gpus': 2,
-    'num_epoch': 200,
+    'num_gpus': 0,
+    'num_epoch': 1,
     'batch_size': 6,
     'lr': 0.0001,
     'lr_decay': 0.9,
@@ -38,26 +39,35 @@ class CrossEntropyLoss2d(torch.nn.Module):
         return self.nll_loss(F.log_softmax(inputs), targets)
 
 if __name__ == '__main__':
-    #img_dir = 'instruments_data2017/train_mine.txt'
+    img_dir = 'instruments_data2017/train_mine.txt'
     #img_dir = '/media/mmlab/data/Datasets/Instruments/2017/train_mine.txt'
-    img_dir = '/media/mobarak/data/Datasets/Instruments/2017/train_mine.txt'
+    # img_dir = '/media/mobarak/data/Datasets/Instruments/2017/train_mine.txt'
     dataset = instruDataset(img_dir=img_dir)
-    train_loader = DataLoader(dataset=dataset, batch_size=args['batch_size'], shuffle=True, num_workers=2,
+    train_loader = DataLoader(dataset=dataset, batch_size=args['batch_size'], shuffle=True, num_workers=args['num_gpus'],
                               drop_last=True)
-    model = InstrumentsMFF(n_classes=args['num_class']).cuda()
-    model = torch.nn.parallel.DataParallel(model, device_ids=range(args['num_gpus']))
+    # model = InstrumentsMFF(n_classes=args['num_class']).cuda()
+    # model = torch.nn.parallel.DataParallel(model, device_ids=range(args['num_gpus']))
+    model = InstrumentsMFF(n_classes=args['num_class']).cpu()
+    # model = torch.nn.parallel.DataParallel(model, device_ids=range(args['num_gpus']))
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=args['w_decay'])
-    criterion = CrossEntropyLoss2d(size_average=True).cuda()
+    # criterion = CrossEntropyLoss2d(size_average=True).cuda()
+    criterion = CrossEntropyLoss2d(size_average=True).cpu()
     model.train()
     epoch_iters = dataset.__len__() / args['batch_size']
     for epoch in range(args['num_epoch']):
         for batch_idx, data in enumerate(train_loader):
             inputs, labels, labels_aux = data
-            inputs = Variable(inputs).cuda()
-            labels = Variable(labels).cuda()
-            labels_aux = Variable(labels_aux).cuda()
+            # inputs = Variable(inputs).cuda()
+            # labels = Variable(labels).cuda()
+            # labels_aux = Variable(labels_aux).cuda()
+            inputs = Variable(inputs).cpu()
+            labels = Variable(labels).cpu()
+            labels_aux = Variable(labels_aux).cpu()
             optimizer.zero_grad()
-            outputs, outputs_aux = model(inputs)
+            outputs, outputs_aux = model.forward(inputs)
+            print(outputs.size()) # 6, 8, 1024, 1280
+            print(labels.size())  # 6, 1024, 1280
+
             main_loss = criterion(outputs, labels)
             aux_loss = criterion(outputs_aux, labels_aux)
             loss = main_loss + 0.4 *aux_loss

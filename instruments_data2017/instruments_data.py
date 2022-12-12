@@ -20,9 +20,13 @@ class instruDataset(Dataset):
         return len(self.img_anno_pairs)
 
     def __getitem__(self, index):
+        print(self.img_anno_pairs[index] +'.jpg')
         _img = Image.open(self.img_anno_pairs[index] +'.jpg').convert('RGB')
+        print(self.img_anno_pairs[index][:-15] + 'instruments_masks/'
+                             + os.path.basename(self.img_anno_pairs[index]) + '.png')
         _target = Image.open(self.img_anno_pairs[index][:-15] + 'instruments_masks/'
                              + os.path.basename(self.img_anno_pairs[index]) + '.png')
+
         # _img = Image.open(self.img_anno_pairs[index][:-26] + 'images/' + os.path.basename(
         #     self.img_anno_pairs[index]) + '.jpg').convert('RGB')
         # _target = Image.open(self.img_anno_pairs[index] + '.png')
